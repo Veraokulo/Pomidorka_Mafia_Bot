@@ -1,14 +1,11 @@
 #-*-coding: utf-8 -*-
 from flask import Flask
 from flask import request
-from flask import jsonify
 import telebot
 import time
-import requests
-import json
-import os
+
 import sqlite3
-API_TOKEN = '521352442:AAFJd2qit7hBhfWuYhCWgY8zNJPPhcpyBkU'
+API_TOKEN = ''
 bot = telebot.TeleBot(API_TOKEN,threaded=False)
 conn = sqlite3.connect('my.db',check_same_thread=False)
 c = conn.cursor()
@@ -45,7 +42,8 @@ def start(message):
 def help(message):
 	main_menu(message,'Этот бот создан для записи и оповещениях на игры в Помидорка Mafia Club.\n'
 					  '/reset - для сброса всех настроек.\n'
-					  '/help - для помощи')
+					  '/help - для помощи.\n'
+			  		  '@veraokulo - по всем вопросам')
 @bot.message_handler(commands=['reset'])
 def reset(message):
 	try:
@@ -61,6 +59,16 @@ def save_photo(message):
 def handle_text(message):
 	try:
 		c.execute('INSERT INTO users (user_id,name,alerts,state) VALUES(?,?,?,?)',(message.from_user.id, message.from_user.first_name,"Да","Новый"))
+		conn.commit()
+	except:
+		pass
+	try:
+		print(message)
+		print(message.from_user)
+		print(message.from_user.id)
+		print(message.from_user.username)
+		c.execute('UPDATE users SET username=? WHERE user_id=?',(message.from_user.username,message.from_user.id))
+		conn.commit()
 	except:
 		pass
 	if message.text == 'Информация о ближайшей игре':
@@ -68,7 +76,7 @@ def handle_text(message):
 		row = c.fetchone()
 		dg = int(time.mktime(time.strptime(row[0], '%d.%m.%Y %H:%M'))) - tm
 		if dg > time.time():
-			answer="Дата и время: "+row[0]+"\nМесто: "+row[1]+"\nВедущий: "+row[2]+"\nВход бесплатный.\n"
+			answer="Дата и время: "+row[0]+"\nМесто: "+row[1]+"\nВедущий: @"+row[2]+"\nВход бесплатный.\n"
 			c.execute('SELECT * FROM zapis WHERE game_id=(SELECT MAX(rowid) FROM games)')
 			count = 1
 			st = ""
@@ -129,7 +137,7 @@ def handle_text(message):
 		c.execute('SELECT * FROM games WHERE rowid = (SELECT MAX(rowid) FROM games)')
 		g = c.fetchone()
 		c.execute('SELECT * FROM users WHERE alerts=?', ("Да",))
-		answer = "Открыта запись на новую игру\nДата и время : " + g[0] + "\nМесто : " + g[1] + "\nВедущий : " + g[2]+"\nВход бесплатный.\n"
+		answer = "Открыта запись на новую игру\nДата и время : " + g[0] + "\nМесто : " + g[1] + "\nВедущий : @" + g[2]+"\nВход бесплатный.\n"
 		mark = telebot.types.ReplyKeyboardMarkup(True, True)
 		mark.row("Записаться на игру", 'Выключить оповещения')
 		mark.row("В главное меню")
